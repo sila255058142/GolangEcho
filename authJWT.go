@@ -1,22 +1,19 @@
 package main
+
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
-	"github.com/labstack/echo/v4"~
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Auth utility functions
 func hashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	return string(bytes), err
@@ -50,31 +47,29 @@ func jwtMiddleware() echo.MiddlewareFunc {
 	}
 	return echojwt.WithConfig(config)
 }
-
-// Auth handlers
 func register(c echo.Context) error {
 	var user User
 	if err := c.Bind(&user); err != nil {
 		log.Printf("Register: Error binding user data: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"status":  "error",
-			"message": "Invalid request body",
+			"message": "Invalid body",
 		})
 	}
 
 	if user.Username == "" || user.Password == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"status":  "error",
-			"message": "Username and password are required",
+			"message": "put Username and password ",
 		})
 	}
 
 	hashedPassword, err := hashPassword(user.Password)
 	if err != nil {
-		log.Printf("Register: Error hashing password: %v", err)
+		log.Printf("Register: Error hash password: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"status":  "error",
-			"message": "Failed to hash password",
+			"message": "Failed hash password",
 		})
 	}
 
@@ -82,10 +77,10 @@ func register(c echo.Context) error {
 	if db != nil {
 		err = db.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", user.Username).Scan(&count)
 		if err != nil {
-			log.Printf("Register: Error checking duplicate username: %v", err)
+			log.Printf("Register: Error checking username: %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"status":  "error",
-				"message": "Failed to check username availability",
+				"message": "Failed to check username",
 			})
 		}
 	}
@@ -93,19 +88,18 @@ func register(c echo.Context) error {
 	if count > 0 {
 		return c.JSON(http.StatusConflict, map[string]string{
 			"status":  "error",
-			"message": "Username is already taken",
+			"message": "Username is Exists",
 		})
 	}
 
 	interestsJSON, err := json.Marshal(user.Interest)
 	if err != nil {
-		log.Printf("Register: Error marshalling interests to JSON: %v", err)
+		log.Printf("Register: Error marshall interests to JSON: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"status":  "error",
-			"message": "Failed to process interests",
+			"message": "Failed to interests",
 		})
 	}
-
 	var id int64
 	if db != nil {
 		result, err := db.Exec("INSERT INTO users (username, password, firstname, lastname, age, gender, description, interest) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -114,7 +108,7 @@ func register(c echo.Context) error {
 			log.Printf("Register: Error inserting new user: %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"status":  "error",
-				"message": "Failed to register user",
+				"message": "Failed to register",
 			})
 		}
 
@@ -123,7 +117,7 @@ func register(c echo.Context) error {
 			log.Printf("Register: Error getting last insert ID: %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"status":  "error",
-				"message": "Failed to retrieve new user ID",
+				"message": "Failed callto new user ID",
 			})
 		}
 	} else {
@@ -169,7 +163,6 @@ func login(c echo.Context) error {
 			mockUser := User{ID: 1, Username: "admin", Firstname: "Admin", Lastname: "User", Interest: []string{"testing"}}
 			return c.JSON(http.StatusOK, map[string]interface{}{
 				"status":  "success",
-				"message": "เข้าสู่ระบบสำเร็จ (โหมดทดสอบ)",
 				"data": LoginResponse{
 					Token: token,
 					User:  mockUser,
@@ -178,7 +171,7 @@ func login(c echo.Context) error {
 		}
 		return c.JSON(http.StatusUnauthorized, map[string]string{
 			"status":  "error",
-			"message": "username หรือ password ไม่ถูกต้อง (โหมดทดสอบ)",
+			"message": "username or password is incorrect",
 		})
 	}
 
@@ -268,7 +261,7 @@ func getProfile(c echo.Context) error {
 		log.Printf("GetProfile: Error querying user by ID %d: %v", claims.UserID, err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"status":  "error",
-			"message": "Failed to retrieve user profile",
+			"message": "Failed to call user profile",
 		})
 	}
 

@@ -1,24 +1,16 @@
 package main
+
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
-	"strconv"
-	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/golang-jwt/jwt/v4"
-	echojwt "github.com/labstack/echo-jwt/v4"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	"golang.org/x/crypto/bcrypt")
+)
 
-
-// Database functions
+// Database
 func initDatabase() {
-	dsn := "root:@tcp(127.0.0.1:3306)/goechodatabase?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root:@tcp(127.0.0.1:3306)/userform?charset=utf8mb4&parseTime=True&loc=Local"
 	var err error
 
 	db, err = sql.Open("mysql", dsn)

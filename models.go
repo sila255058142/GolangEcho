@@ -1,19 +1,8 @@
 package main
-import (
-	"database/sql"
-	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
-	"strconv"
-	"time"
 
+import (
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/golang-jwt/jwt/v4"
-	echojwt "github.com/labstack/echo-jwt/v4"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type User struct {

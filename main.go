@@ -2,19 +2,12 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
-	"strconv"
-	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/golang-jwt/jwt/v4"
-	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var db *sql.DB
@@ -26,18 +19,17 @@ func main() {
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-
+// cors middleware
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
 	}))
 
-	// Initialize database connection
 	initDatabase()
 	defer closeDatabase()
 
-	// Routes
+	// check status server
 	e.GET("/", func(c echo.Context) error {
 		status := "disconnected"
 		if db != nil {
@@ -49,11 +41,11 @@ func main() {
 		})
 	})
 
-	// Public routes
+	// เราท์ส์ที่ไม่ต้องการ JWT
 	e.POST("/api/register", register)
 	e.POST("/api/login", login)
 
-	// Protected routes
+	// เราท์ส์ที่ต้องการ JWT
 	protected := e.Group("/api")
 	protected.Use(jwtMiddleware())
 
@@ -70,7 +62,7 @@ func main() {
 		})
 	})
 
-	// Start server
+	// เริ่มเซิร์ฟเวอร์ โชว์ที่ Terminal
 	fmt.Println("Server starting on http://localhost:8080")
 	fmt.Println("PATH Endpoints (Unprotected):")
 	fmt.Println(" 	POST 	/api/register 	= สมัครสมาชิก")
@@ -82,7 +74,7 @@ func main() {
 	fmt.Println(" 	PUT 	/api/users/:id 	= อัปเดตผู้ใช้")
 	fmt.Println(" 	DELETE /api/users/:id 	= ลบผู้ใช้")
 	fmt.Println(" 	GET 	/api/profile 	= ดูโปรไฟล์ผู้ใช้ปัจจุบัน")
-	fmt.Println(" 	GET 	/api/test 	 	= ทดสอบ Protected API")
+	fmt.Println(" 	GET 	/api/test 	 = ทดสอบ Protected API")
 
 	e.Logger.Fatal(e.Start(":8080"))
 }

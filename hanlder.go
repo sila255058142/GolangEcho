@@ -1,58 +1,50 @@
 package main
+
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/golang-jwt/jwt/v4"
-	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	"golang.org/x/crypto/bcrypt")
-// CRUD handlers
+) // CRUD
 func createUser(c echo.Context) error {
 	var user User
 	if err := c.Bind(&user); err != nil {
-		log.Printf("Error binding user data: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request body"})
 	}
 
-	if user.Firstname == "" || user.Lastname == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Please enter first name and last name"})
+	if user.Username == "" || user.Password == "" || user.Firstname == "" || user.Lastname == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Please enter all fields"})
 	}
 
-	if db == nil {
-		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "Database not connected"})
+	hashedPassword, err := hashPassword(user.Password)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
 	}
 
 	interestsJSON, err := json.Marshal(user.Interest)
 	if err != nil {
-		log.Printf("Error converting interests to JSON: %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to process interests"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to call  interests"})
 	}
 
 	result, err := db.Exec(
-		"INSERT INTO users (firstname, lastname, age, gender, description, interest) VALUES (?, ?, ?, ?, ?, ?)",
-		user.Firstname, user.Lastname, user.Age, user.Gender, user.Description, string(interestsJSON),
+		"INSERT INTO users (username, password, firstname, lastname, age, gender, description, interest) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		user.Username, hashedPassword, user.Firstname, user.Lastname, user.Age, user.Gender, user.Description, string(interestsJSON),
 	)
 	if err != nil {
-		log.Printf("Error inserting user: %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create user"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed create user"})
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil {
-		log.Printf("Error getting last insert ID: %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve new user ID"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to call new user ID"})
 	}
 	user.ID = int(id)
-
-	log.Printf("Create user success: %+v", user)
+	user.Password = ""
+	
 	return c.JSON(http.StatusCreated, user)
 }
 
@@ -61,7 +53,7 @@ func getAllUsers(c echo.Context) error {
 		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "Database not connected"})
 	}
 
-	rows, err := db.Query("SELECT id, firstname, lastname, age, gender, description, interest FROM users")
+	rows, err := db.Query("SELECT * FROM users")
 	if err != nil {
 		log.Printf("Error querying users: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve users"})
@@ -107,7 +99,7 @@ func getUserByID(c echo.Context) error {
 	var user User
 	var interestJSONString sql.NullString
 
-	err = db.QueryRow("SELECT id, firstname, lastname, age, gender, description, interest FROM users WHERE id = ?", id).
+	err = db.QueryRow("SELECT * FROM users WHERE id = ?", id).
 		Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Age, &user.Gender, &user.Description, &interestJSONString)
 
 	if err != nil {
@@ -115,7 +107,7 @@ func getUserByID(c echo.Context) error {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
 		}
 		log.Printf("Error querying user by ID %d: %v", id, err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve user"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to call user"})
 	}
 
 	if interestJSONString.Valid {
@@ -147,7 +139,7 @@ func updateUser(c echo.Context) error {
 	}
 
 	if user.Firstname == "" || user.Lastname == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "First name and last name cannot be empty"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "First name and last name cannot empty pls"})
 	}
 
 	user.ID = id
@@ -155,7 +147,7 @@ func updateUser(c echo.Context) error {
 	interestsJSON, err := json.Marshal(user.Interest)
 	if err != nil {
 		log.Printf("Error converting interests to JSON for update: %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to process interests for update"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to interests for update"})
 	}
 
 	result, err := db.Exec(
